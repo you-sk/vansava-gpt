@@ -5,10 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mini Vampire Survivors Clone</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #222; color: white; font-family: sans-serif; }
-        canvas { display: block; margin: 0 auto; background: #333; }
-        #ui { position: absolute; top: 10px; left: 10px; }
-        button { margin: 5px; padding: 10px; }
+        body { margin: 0; overflow: hidden; background: #222; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        #ui { margin-bottom: 10px; text-align: center; }
+        canvas { display: block; background: #333; }
+        button { margin: 5px; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #45a049; }
+        #upgradeScreen button { background-color: #008CBA; }
+        #upgradeScreen button:hover { background-color: #007B9E; }
+        #status { margin-top: 5px; font-size: 1.2em; }
     </style>
 </head>
 <body>
@@ -51,7 +55,20 @@
             // Initialize with default weapon
             player.weapons.push(new Weapon('EightWayShot', 300));
 
+            // Add keyboard listener for start/retry
+            window.addEventListener('keydown', handleGameStartRetry);
+
             requestAnimationFrame(gameLoop);
+        }
+
+        function handleGameStartRetry(e) {
+            if (e.key === 'Enter') {
+                if (!gameRunning && document.getElementById('startButton').style.display !== 'none') {
+                    startGame();
+                } else if (!gameRunning && document.getElementById('retryButton').style.display !== 'none') {
+                    startGame();
+                }
+            }
         }
 
         // Weapon Definitions
@@ -86,11 +103,11 @@
             upgradeOptionsDiv.innerHTML = '';
 
             const availableUpgrades = [
-                { name: 'EightWayShot Interval Up', description: 'Decreases EightWayShot interval by 50ms', apply: () => {
+                { name: '8方向ショット 攻撃間隔短縮', description: '8方向ショットの攻撃間隔を50ms短縮します', apply: () => {
                     const eightWay = player.weapons.find(w => w.name === 'EightWayShot');
                     if (eightWay) eightWay.interval = Math.max(100, eightWay.interval - 50);
                 }},
-                { name: 'New Weapon: FrontalShot', description: 'Shoots 3 bullets forward', apply: () => {
+                { name: '新武器: 前方ショット', description: '前方に3発の弾を発射します', apply: () => {
                     player.weapons.push(new Weapon('FrontalShot', 200));
                 }},
                 // Add more upgrade options here
@@ -268,6 +285,7 @@
             gameRunning = false;
             document.getElementById('status').innerText += ' - GAME OVER';
             document.getElementById('retryButton').style.display = 'inline-block';
+            window.addEventListener('keydown', handleGameStartRetry); // Re-add listener for retry
         }
 
         window.addEventListener('keydown', e => keys[e.key] = true);
@@ -275,6 +293,9 @@
 
         document.getElementById('startButton').addEventListener('click', startGame);
         document.getElementById('retryButton').addEventListener('click', startGame);
+
+        // Initial setup for start button keyboard listener
+        window.addEventListener('keydown', handleGameStartRetry);
     </script>
 </body>
 </html>
