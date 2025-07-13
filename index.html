@@ -17,39 +17,124 @@
         <button id="retryButton" style="display:none;">Retry</button>
         <div id="status"></div>
     </div>
+    <div id="upgradeScreen" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.8); padding:20px; border-radius:10px; text-align:center; z-index:100;">
+            <h2>アップグレードを選択してください！</h2>
+            <p>数字キーで選択:</p>
+            <div id="upgradeOptions" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        let player, enemies, bullets, expOrbs, keys, gameRunning, lastTime, shootCooldown, elapsedTime, nextUpgradeTime;
+        let player, enemies, bullets, expOrbs, keys, gameRunning, gamePaused, lastTime, elapsedTime;
 
         const playerSpeed = 3;
         const enemySpeed = 1.5;
         const bulletSpeed = 4;
-        let shootInterval = 300;
 
         function startGame() {
-            player = { x: 400, y: 300, size: 10, exp: 0, level: 1, expToLevelUp: 5 };
+            player = { x: 400, y: 300, size: 10, exp: 0, level: 1, expToLevelUp: 5, weapons: [] };
             enemies = [];
             bullets = [];
             expOrbs = [];
             keys = {};
             gameRunning = true;
+            gamePaused = false;
             lastTime = 0;
-            shootCooldown = 0;
             elapsedTime = 0;
-            nextUpgradeTime = 10;
 
             document.getElementById('startButton').style.display = 'none';
             document.getElementById('retryButton').style.display = 'none';
             document.getElementById('status').innerText = '';
 
+            // Initialize with default weapon
+            player.weapons.push(new Weapon('EightWayShot', 300));
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Weapon Definitions
+        class Weapon {
+            constructor(name, interval) {
+                this.name = name;
+                this.interval = interval;
+                this.shootCooldown = 0;
+            }
+
+            shoot(player, bullets) {
+                if (this.name === 'EightWayShot') {
+                    for (let i = 0; i < 8; i++) {
+                        let angle = (Math.PI * 2 / 8) * i;
+                        bullets.push({ x: player.x, y: player.y, size: 5, angle: angle });
+                    }
+                }
+                else if (this.name === 'FrontalShot') {
+                    // Shoot 3 bullets forward
+                    for (let i = -1; i <= 1; i++) {
+                        let angle = -Math.PI / 2 + (i * 0.1); // Slightly spread bullets
+                        bullets.push({ x: player.x, y: player.y, size: 5, angle: angle });
+                    }
+                }
+            }
+        }
+
+        function showUpgradeScreen() {
+            gamePaused = true;
+            document.getElementById('upgradeScreen').style.display = 'block';
+            const upgradeOptionsDiv = document.getElementById('upgradeOptions');
+            upgradeOptionsDiv.innerHTML = '';
+
+            const availableUpgrades = [
+                { name: 'EightWayShot Interval Up', description: 'Decreases EightWayShot interval by 50ms', apply: () => {
+                    const eightWay = player.weapons.find(w => w.name === 'EightWayShot');
+                    if (eightWay) eightWay.interval = Math.max(100, eightWay.interval - 50);
+                }},
+                { name: 'New Weapon: FrontalShot', description: 'Shoots 3 bullets forward', apply: () => {
+                    player.weapons.push(new Weapon('FrontalShot', 200));
+                }},
+                // Add more upgrade options here
+            ];
+
+            // Filter out upgrades that are not applicable (e.g., already have max level of a weapon)
+            // For now, just display all.
+
+            availableUpgrades.forEach((upgrade, index) => {
+                const button = document.createElement('button');
+                button.innerText = `${index + 1}. ${upgrade.name}\n${upgrade.description}`;
+                button.onclick = () => {
+                    upgrade.apply();
+                    hideUpgradeScreen();
+                };
+                upgradeOptionsDiv.appendChild(button);
+            });
+
+            // Add keyboard listener for upgrade selection
+            window.addEventListener('keydown', handleUpgradeSelection);
+        }
+
+        function handleUpgradeSelection(e) {
+            if (!gamePaused) return;
+
+            const upgradeOptionsDiv = document.getElementById('upgradeOptions');
+            const buttons = upgradeOptionsDiv.getElementsByTagName('button');
+            const selectedIndex = parseInt(e.key) - 1;
+
+            if (selectedIndex >= 0 && selectedIndex < buttons.length) {
+                buttons[selectedIndex].click(); // Simulate button click
+                window.removeEventListener('keydown', handleUpgradeSelection);
+            }
+        }
+
+        function hideUpgradeScreen() {
+            document.getElementById('upgradeScreen').style.display = 'none';
+            gamePaused = false;
+            window.removeEventListener('keydown', handleUpgradeSelection); // Remove listener when screen hides
             requestAnimationFrame(gameLoop);
         }
 
         function gameLoop(timestamp) {
-            if (!gameRunning) return;
+            if (!gameRunning || gamePaused) return;
 
             let delta = timestamp - lastTime;
             lastTime = timestamp;
@@ -65,15 +150,13 @@
             player.x = Math.max(0, Math.min(canvas.width, player.x));
             player.y = Math.max(0, Math.min(canvas.height, player.y));
 
-            if (shootCooldown <= 0) {
-                for (let i = 0; i < 8; i++) {
-                    let angle = (Math.PI * 2 / 8) * i;
-                    bullets.push({ x: player.x, y: player.y, size: 5, angle: angle });
+            player.weapons.forEach(weapon => {
+                weapon.shootCooldown -= delta;
+                if (weapon.shootCooldown <= 0) {
+                    weapon.shoot(player, bullets);
+                    weapon.shootCooldown = weapon.interval;
                 }
-                shootCooldown = shootInterval;
-            } else {
-                shootCooldown -= delta;
-            }
+            });
 
             bullets.forEach(b => {
                 b.x += bulletSpeed * Math.cos(b.angle);
@@ -142,7 +225,7 @@
                 player.level++;
                 player.exp = 0;
                 player.expToLevelUp += 5;
-                shootInterval = Math.max(100, shootInterval - 50);
+                showUpgradeScreen();
             }
 
             ctx.fillStyle = 'lime';
