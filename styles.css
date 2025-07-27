@@ -1,0 +1,204 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #222;
+    color: white;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+#ui {
+    margin-bottom: 10px;
+    text-align: center;
+    min-height: 80px; /* ボタンとステータスの高さを確保 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+canvas {
+    display: block;
+    background: #333;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.button-container {
+    height: 45px; /* ボタンの高さを固定 */
+    margin-bottom: 5px;
+    position: relative;
+    width: 150px;
+}
+
+/* メインメニューのボタン専用スタイル */
+.button-container button {
+    padding: 10px 30px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: opacity 0.3s ease, background-color 0.3s ease, transform 0.1s ease;
+    width: 150px;
+    height: 40px;
+}
+
+.button-container button:hover {
+    background-color: #45a049;
+}
+
+.button-container button:active {
+    transform: scale(0.98);
+}
+
+#startButton, #retryButton {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 0;
+}
+
+#upgradeScreen {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    z-index: 100;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+    border: 2px solid #00ffff;
+}
+
+#upgradeScreen h2 {
+    color: #00ffff;
+    margin-bottom: 15px;
+}
+
+#upgradeScreen button {
+    background-color: #008CBA;
+    width: 100%;
+    height: auto;
+    text-align: left;
+    padding: 15px;
+    margin: 5px 0;
+    position: relative;
+    left: 0;
+    transform: none;
+}
+
+#upgradeScreen button:hover {
+    background-color: #007B9E;
+    transform: none;
+}
+
+#upgradeScreen button:active {
+    transform: scale(0.98);
+}
+
+#upgradeOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+    min-width: 400px;
+}
+
+#status {
+    margin-top: 5px;
+    font-size: 1.2em;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+#highScore {
+    font-size: 1em;
+    color: #ffd700;
+    margin-top: 5px;
+}
+
+/* パーティクルエフェクト用 */
+.particle {
+    position: absolute;
+    pointer-events: none;
+    animation: particleFade 0.5s ease-out forwards;
+}
+
+@keyframes particleFade {
+    0% {
+        opacity: 1;
+        transform: scale(1) translate(0, 0);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.5) translate(0, -20px);
+    }
+}
+
+/* 画面揺れエフェクト */
+@keyframes shake {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-5px, 0); }
+    75% { transform: translate(5px, 0); }
+}
+
+.shake {
+    animation: shake 0.2s;
+}
+
+/* ゲームオーバー画面 */
+#gameOverScreen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 200;
+    color: #ff0000;
+    text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+    animation: gameOverFade 0.5s ease-in;
+}
+
+#gameOverScreen h1 {
+    font-size: 72px;
+    margin: 0;
+    font-weight: bold;
+    letter-spacing: 5px;
+    animation: gameOverPulse 1s ease-in-out infinite;
+}
+
+#finalScore {
+    font-size: 24px;
+    margin-top: 20px;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+@keyframes gameOverFade {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes gameOverPulse {
+    0%, 100% {
+        text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+    }
+    50% {
+        text-shadow: 0 0 40px rgba(255, 0, 0, 1);
+    }
+}

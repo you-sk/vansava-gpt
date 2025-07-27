@@ -1,301 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Vampire Survivors Clone</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #222; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
-        #ui { margin-bottom: 10px; text-align: center; }
-        canvas { display: block; background: #333; }
-        button { margin: 5px; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #45a049; }
-        #upgradeScreen button { background-color: #008CBA; }
-        #upgradeScreen button:hover { background-color: #007B9E; }
-        #status { margin-top: 5px; font-size: 1.2em; }
-    </style>
+    <title>Vampire Survivors Clone - Enhanced Edition</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="ui">
-        <button id="startButton">Start Game</button>
-        <button id="retryButton" style="display:none;">Retry</button>
-        <div id="status"></div>
-    </div>
-    <div id="upgradeScreen" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.8); padding:20px; border-radius:10px; text-align:center; z-index:100;">
-            <h2>アップグレードを選択してください！</h2>
-            <p>数字キーで選択:</p>
-            <div id="upgradeOptions" style="display:flex; flex-direction:column; gap:10px;"></div>
+        <div class="button-container">
+            <button id="startButton">Start Game</button>
+            <button id="retryButton" style="display:none; opacity:0;">Retry</button>
         </div>
+        <div id="status"></div>
+        <div id="highScore"></div>
+    </div>
+    
+    <div id="upgradeScreen">
+        <h2>レベルアップ！</h2>
+        <p>数字キーで選択:</p>
+        <div id="upgradeOptions"></div>
+    </div>
+    
+    <div id="gameOverScreen" style="display:none;">
+        <h1>GAME OVER</h1>
+        <div id="finalScore"></div>
+    </div>
+    
     <canvas id="gameCanvas" width="800" height="600"></canvas>
-
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let player, enemies, bullets, expOrbs, keys, gameRunning, gamePaused, lastTime, elapsedTime;
-
-        const playerSpeed = 3;
-        const enemySpeed = 1.5;
-        const bulletSpeed = 4;
-
-        function startGame() {
-            player = { x: 400, y: 300, size: 10, exp: 0, level: 1, expToLevelUp: 5, weapons: [] };
-            enemies = [];
-            bullets = [];
-            expOrbs = [];
-            keys = {};
-            gameRunning = true;
-            gamePaused = false;
-            lastTime = 0;
-            elapsedTime = 0;
-
-            document.getElementById('startButton').style.display = 'none';
-            document.getElementById('retryButton').style.display = 'none';
-            document.getElementById('status').innerText = '';
-
-            // Initialize with default weapon
-            player.weapons.push(new Weapon('EightWayShot', 300));
-
-            // Add keyboard listener for start/retry
-            window.addEventListener('keydown', handleGameStartRetry);
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        function handleGameStartRetry(e) {
-            if (e.key === 'Enter') {
-                if (!gameRunning && document.getElementById('startButton').style.display !== 'none') {
-                    startGame();
-                } else if (!gameRunning && document.getElementById('retryButton').style.display !== 'none') {
-                    startGame();
-                }
-            }
-        }
-
-        // Weapon Definitions
-        class Weapon {
-            constructor(name, interval) {
-                this.name = name;
-                this.interval = interval;
-                this.shootCooldown = 0;
-            }
-
-            shoot(player, bullets) {
-                if (this.name === 'EightWayShot') {
-                    for (let i = 0; i < 8; i++) {
-                        let angle = (Math.PI * 2 / 8) * i;
-                        bullets.push({ x: player.x, y: player.y, size: 5, angle: angle });
-                    }
-                }
-                else if (this.name === 'FrontalShot') {
-                    // Shoot 3 bullets forward
-                    for (let i = -1; i <= 1; i++) {
-                        let angle = -Math.PI / 2 + (i * 0.1); // Slightly spread bullets
-                        bullets.push({ x: player.x, y: player.y, size: 5, angle: angle });
-                    }
-                }
-            }
-        }
-
-        function showUpgradeScreen() {
-            gamePaused = true;
-            document.getElementById('upgradeScreen').style.display = 'block';
-            const upgradeOptionsDiv = document.getElementById('upgradeOptions');
-            upgradeOptionsDiv.innerHTML = '';
-
-            const availableUpgrades = [
-                { name: '8方向ショット 攻撃間隔短縮', description: '8方向ショットの攻撃間隔を50ms短縮します', apply: () => {
-                    const eightWay = player.weapons.find(w => w.name === 'EightWayShot');
-                    if (eightWay) eightWay.interval = Math.max(100, eightWay.interval - 50);
-                }},
-                { name: '新武器: 前方ショット', description: '前方に3発の弾を発射します', apply: () => {
-                    player.weapons.push(new Weapon('FrontalShot', 200));
-                }},
-                // Add more upgrade options here
-            ];
-
-            // Filter out upgrades that are not applicable (e.g., already have max level of a weapon)
-            // For now, just display all.
-
-            availableUpgrades.forEach((upgrade, index) => {
-                const button = document.createElement('button');
-                button.innerText = `${index + 1}. ${upgrade.name}\n${upgrade.description}`;
-                button.onclick = () => {
-                    upgrade.apply();
-                    hideUpgradeScreen();
-                };
-                upgradeOptionsDiv.appendChild(button);
-            });
-
-            // Add keyboard listener for upgrade selection
-            window.addEventListener('keydown', handleUpgradeSelection);
-        }
-
-        function handleUpgradeSelection(e) {
-            if (!gamePaused) return;
-
-            const upgradeOptionsDiv = document.getElementById('upgradeOptions');
-            const buttons = upgradeOptionsDiv.getElementsByTagName('button');
-            const selectedIndex = parseInt(e.key) - 1;
-
-            if (selectedIndex >= 0 && selectedIndex < buttons.length) {
-                buttons[selectedIndex].click(); // Simulate button click
-                window.removeEventListener('keydown', handleUpgradeSelection);
-            }
-        }
-
-        function hideUpgradeScreen() {
-            document.getElementById('upgradeScreen').style.display = 'none';
-            gamePaused = false;
-            window.removeEventListener('keydown', handleUpgradeSelection); // Remove listener when screen hides
-            requestAnimationFrame(gameLoop);
-        }
-
-        function gameLoop(timestamp) {
-            if (!gameRunning || gamePaused) return;
-
-            let delta = timestamp - lastTime;
-            lastTime = timestamp;
-            elapsedTime += delta / 1000;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if (keys['ArrowUp']) player.y -= playerSpeed;
-            if (keys['ArrowDown']) player.y += playerSpeed;
-            if (keys['ArrowLeft']) player.x -= playerSpeed;
-            if (keys['ArrowRight']) player.x += playerSpeed;
-
-            player.x = Math.max(0, Math.min(canvas.width, player.x));
-            player.y = Math.max(0, Math.min(canvas.height, player.y));
-
-            player.weapons.forEach(weapon => {
-                weapon.shootCooldown -= delta;
-                if (weapon.shootCooldown <= 0) {
-                    weapon.shoot(player, bullets);
-                    weapon.shootCooldown = weapon.interval;
-                }
-            });
-
-            bullets.forEach(b => {
-                b.x += bulletSpeed * Math.cos(b.angle);
-                b.y += bulletSpeed * Math.sin(b.angle);
-            });
-
-            bullets = bullets.filter(b => !b.hit && b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height);
-
-            if (Math.random() < 0.02) {
-                let edge = Math.floor(Math.random() * 4);
-                let ex, ey;
-                if (edge === 0) { ex = Math.random() * canvas.width; ey = -20; }
-                else if (edge === 1) { ex = Math.random() * canvas.width; ey = canvas.height + 20; }
-                else if (edge === 2) { ex = -20; ey = Math.random() * canvas.height; }
-                else { ex = canvas.width + 20; ey = Math.random() * canvas.height; }
-                enemies.push({ x: ex, y: ey, size: 10, hp: 3 });
-            }
-
-            enemies.forEach(e => {
-                let dx = player.x - e.x;
-                let dy = player.y - e.y;
-                let dist = Math.hypot(dx, dy);
-                e.x += (dx / dist) * enemySpeed;
-                e.y += (dy / dist) * enemySpeed;
-            });
-
-            bullets.forEach(b => {
-                enemies.forEach(e => {
-                    if (Math.hypot(e.x - b.x, e.y - b.y) < e.size + b.size) {
-                        e.hp--;
-                        b.hit = true;
-                    }
-                });
-            });
-
-            bullets = bullets.filter(b => !b.hit && b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height);
-
-            enemies = enemies.filter(e => {
-                if (e.hp <= 0) {
-                    expOrbs.push({ x: e.x, y: e.y, size: 5 });
-                    return false;
-                }
-                if (Math.hypot(e.x - player.x, e.y - player.y) < e.size + player.size) {
-                    endGame();
-                    return false;
-                }
-                return true;
-            });
-
-            expOrbs.forEach(o => {
-                let dx = player.x - o.x;
-                let dy = player.y - o.y;
-                let dist = Math.hypot(dx, dy);
-                if (dist < 10) {
-                    player.exp++;
-                    o.collected = true;
-                } else {
-                    o.x += (dx / dist) * 10.0;
-                    o.y += (dy / dist) * 10.0;
-                }
-            });
-
-            expOrbs = expOrbs.filter(o => !o.collected);
-
-            if (player.exp >= player.expToLevelUp) {
-                player.level++;
-                player.exp = 0;
-                player.expToLevelUp += 5;
-                showUpgradeScreen();
-            }
-
-            ctx.fillStyle = 'lime';
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = 'yellow';
-            bullets.forEach(b => {
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            enemies.forEach(e => {
-                ctx.fillStyle = 'red';
-                ctx.beginPath();
-                ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = 'white';
-                ctx.fillRect(e.x - 10, e.y - 15, 20, 3);
-                ctx.fillStyle = 'green';
-                ctx.fillRect(e.x - 10, e.y - 15, (20 * e.hp) / 3, 3);
-            });
-
-            ctx.fillStyle = 'cyan';
-            expOrbs.forEach(o => {
-                ctx.beginPath();
-                ctx.arc(o.x, o.y, o.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            document.getElementById('status').innerText = `Time Survived: ${Math.floor(elapsedTime)} sec | Level: ${player.level} | EXP: ${player.exp}/${player.expToLevelUp}`;
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        function endGame() {
-            gameRunning = false;
-            document.getElementById('status').innerText += ' - GAME OVER';
-            document.getElementById('retryButton').style.display = 'inline-block';
-            window.addEventListener('keydown', handleGameStartRetry); // Re-add listener for retry
-        }
-
-        window.addEventListener('keydown', e => keys[e.key] = true);
-        window.addEventListener('keyup', e => keys[e.key] = false);
-
-        document.getElementById('startButton').addEventListener('click', startGame);
-        document.getElementById('retryButton').addEventListener('click', startGame);
-
-        // Initial setup for start button keyboard listener
-        window.addEventListener('keydown', handleGameStartRetry);
-    </script>
+    
+    <script src="game.js"></script>
 </body>
 </html>
